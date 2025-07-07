@@ -1,0 +1,149 @@
+/* Background for Employee and HR */
+.employee-bg {
+    background: linear-gradient(135deg, #dbeafe, #c7d2fe);
+}
+
+.hr-bg {
+    background: linear-gradient(135deg, #bbf7d0, #86efac);
+}
+
+/* Main container: center everything */
+.login-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    z-index: 1000;
+    background: rgba(255,255,255,0.7); /* Optional: subtle overlay */
+}
+
+/* Section to match card width and responsiveness */
+.login-section {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 1rem;
+    border-radius: 1rem;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+}
+
+@media (max-width: 500px) {
+    .login-section {
+        max-width: 95vw;
+        padding: 0.5rem;
+    }
+}
+
+/* Login card styling */
+.login-card {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 1rem;
+    padding: 2rem;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Login logo */
+.login-logo {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    margin: 0 auto 1rem auto;
+    display: block;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Text */
+.login-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 0.25rem;
+    color: #1f2937;
+}
+
+.login-subtitle {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #374151;
+    margin-bottom: 1rem;
+}
+
+/* Inputs */
+.login-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #d1d5db;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.login-input:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
+/* Buttons */
+.login-button {
+    width: 100%;
+    background: #4f46e5;
+    color: #fff;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.login-button:hover {
+    background: #4338ca;
+}
+
+.login-button.hr {
+    background: #16a34a;
+}
+
+.login-button.hr:hover {
+    background: #15803d;
+}
+
+/* Back button */
+.back-button {
+    text-align: center;
+    margin-top: 1rem;
+    color: #4f46e5;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.back-button:hover {
+    text-decoration: underline;
+}
+
+body {
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
