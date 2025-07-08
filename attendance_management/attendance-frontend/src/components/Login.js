@@ -55,8 +55,8 @@ const Login = () => {
 
   if (!organization) {
     return (
-      <div className="login-container">
-        <div className="login-section employee-bg">
+      <div className="login-page-container employee-bg">
+        <div className="login-card">
           <p>Loading organization...</p>
         </div>
       </div>
@@ -64,9 +64,8 @@ const Login = () => {
   }
 
   return (
-    <div className="login-container">
-      <div className={`login-section ${role === 'employee' ? 'employee-bg' : 'hr-bg'}`}>
-        <div className="login-card">
+    <div className={`login-page-container ${role === 'employee' ? 'employee-bg' : 'hr-bg'}`}>
+      <div className="login-card">
           {organization.logo && (
             <img src={organization.logo} alt={organization.name} className="login-logo" />
           )}
@@ -133,9 +132,9 @@ const Login = () => {
             Back to Organizations
           </div>
         </div>
-      </div>
     </div>
   );
 };
 
 export default Login;
+
