@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { authAPI } from '../services/api';
+import { authAPI, attendanceAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
 const AdminEmployees = () => {
@@ -33,7 +33,7 @@ const AdminEmployees = () => {
 
   const fetchEmployees = async () => {
     try {
-      const response = await authAPI.getUsers();
+      const response = await attendanceAPI.getEmployeesLeaveManagement();
       setEmployees(response.data);
     } catch (error) {
       toast.error('Failed to fetch employees');
@@ -50,7 +50,7 @@ const AdminEmployees = () => {
       filtered = filtered.filter(emp => emp.designation === filters.designation);
     }
     if (filters.status) {
-      filtered = filtered.filter(emp => filters.status === 'active' ? emp.is_active : !emp.is_active);
+      filtered = filtered.filter(emp => filters.status === 'active' ? emp.status === 'Active' : emp.status === 'Inactive');
     }
     
     setFilteredEmployees(filtered);
@@ -166,10 +166,10 @@ const AdminEmployees = () => {
                       padding: '2px 8px',
                       borderRadius: '12px',
                       fontSize: '11px',
-                      backgroundColor: employee.is_active ? '#d1fae5' : '#fee2e2',
-                      color: employee.is_active ? '#065f46' : '#991b1b'
+                      backgroundColor: employee.status === 'Active' ? '#d1fae5' : '#fee2e2',
+                      color: employee.status === 'Active' ? '#065f46' : '#991b1b'
                     }}>
-                      {employee.is_active ? 'Active' : 'Inactive'}
+                      {employee.status}
                     </span>
                   </div>
                 </div>

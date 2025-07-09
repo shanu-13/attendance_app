@@ -57,9 +57,9 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('refresh_token');
   };
 
-  const updateProfile = async (profileData) => {
+  const updateProfile = async (profileData, isFileUpload = false) => {
     try {
-      const response = await authAPI.updateProfile(profileData);
+      const response = await authAPI.updateProfile(profileData, isFileUpload);
       setUser(response.data);
       return { success: true };
     } catch (error) {

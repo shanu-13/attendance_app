@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     path('clock-in/', views.clock_in, name='clock_in'),
     path('clock-out/', views.clock_out, name='clock_out'),
+    path('status/', views.attendance_status, name='attendance_status'),
     path('today/', views.attendance_today, name='attendance_today'),
     path('history/', views.attendance_history, name='attendance_history'),
     path('leave/request/', views.LeaveRequestCreateView.as_view(), name='leave_request'),

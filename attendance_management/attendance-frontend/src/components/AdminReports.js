@@ -24,13 +24,14 @@ const AdminReports = () => {
 
   const downloadReport = () => {
     const csvContent = [
-      ['Employee', 'Date', 'Clock In', 'Clock Out', 'Total Hours', 'Status'],
+      ['Employee', 'Date', 'Clock In', 'Clock Out', 'Total Hours', 'Sessions', 'Status'],
       ...attendanceData.map(record => [
         `${record.user?.first_name || ''} ${record.user?.last_name || ''}`,
         record.date,
         record.clock_in ? new Date(record.clock_in).toLocaleTimeString() : 'N/A',
         record.clock_out ? new Date(record.clock_out).toLocaleTimeString() : 'N/A',
         record.total_hours || '0.00',
+        record.sessions_count || '1',
         record.is_present ? 'Present' : 'Absent'
       ])
     ].map(row => row.join(',')).join('\n');
@@ -138,6 +139,7 @@ const AdminReports = () => {
                     <th style={{padding: '12px', textAlign: 'left', color: '#374151'}}>Clock In</th>
                     <th style={{padding: '12px', textAlign: 'left', color: '#374151'}}>Clock Out</th>
                     <th style={{padding: '12px', textAlign: 'left', color: '#374151'}}>Total Hours</th>
+                    <th style={{padding: '12px', textAlign: 'left', color: '#374151'}}>Sessions</th>
                     <th style={{padding: '12px', textAlign: 'left', color: '#374151'}}>Status</th>
                   </tr>
                 </thead>
@@ -154,7 +156,18 @@ const AdminReports = () => {
                       <td style={{padding: '12px'}}>
                         {record.clock_out ? new Date(record.clock_out).toLocaleTimeString() : 'N/A'}
                       </td>
-                      <td style={{padding: '12px'}}>{record.total_hours || '0.00'}</td>
+                      <td style={{padding: '12px', fontWeight: '600'}}>{record.total_hours || '0.00'}</td>
+                      <td style={{padding: '12px'}}>
+                        <span style={{
+                          padding: '2px 6px',
+                          borderRadius: '10px',
+                          fontSize: '11px',
+                          backgroundColor: '#f3f4f6',
+                          color: '#374151'
+                        }}>
+                          {record.sessions_count || 1}
+                        </span>
+                      </td>
                       <td style={{padding: '12px'}}>
                         <span style={{
                           padding: '4px 8px',

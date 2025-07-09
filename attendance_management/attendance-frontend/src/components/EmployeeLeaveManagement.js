@@ -69,10 +69,22 @@ const EmployeeLeaveManagement = () => {
               }}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px'}}>
                   <div>
-                    <h3 style={{margin: 0, fontWeight: 'bold', fontSize: '18px', color: '#111827'}}>
-                      {employee.name}
-                    </h3>
-                    <div style={{display: 'flex', gap: '16px', fontSize: '14px', color: '#6b7280', marginTop: '4px'}}>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px'}}>
+                      <h3 style={{margin: 0, fontWeight: 'bold', fontSize: '18px', color: '#111827'}}>
+                        {employee.name}
+                      </h3>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        backgroundColor: employee.status === 'Active' ? '#d1fae5' : '#fee2e2',
+                        color: employee.status === 'Active' ? '#065f46' : '#991b1b'
+                      }}>
+                        {employee.status}
+                      </span>
+                    </div>
+                    <div style={{display: 'flex', gap: '16px', fontSize: '14px', color: '#6b7280'}}>
                       <span>ID: {employee.employee_id || 'N/A'}</span>
                       <span>Email: {employee.email}</span>
                       {employee.designation && <span>Role: {employee.designation}</span>}

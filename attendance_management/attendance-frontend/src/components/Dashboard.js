@@ -5,13 +5,15 @@ import toast from 'react-hot-toast';
 
 const Dashboard = () => {
   const { user, isAdmin } = useAuth();
-  const [todayAttendance, setTodayAttendance] = useState(null);
+  const [attendanceStatus, setAttendanceStatus] = useState(null);
+  const [todayAttendance, setTodayAttendance] = useState([]);
   const [leaveBalance, setLeaveBalance] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
+    fetchAttendanceStatus();
     fetchTodayAttendance();
     fetchLeaveBalance();
     fetchNotifications();
@@ -23,10 +25,19 @@ const Dashboard = () => {
     return () => clearInterval(timer);
   }, []);
 
+  const fetchAttendanceStatus = async () => {
+    try {
+      const response = await attendanceAPI.getAttendanceStatus();
+      setAttendanceStatus(response.data);
+    } catch (error) {
+      console.error('Error fetching attendance status:', error);
+    }
+  };
+
   const fetchTodayAttendance = async () => {
     try {
       const response = await attendanceAPI.getTodayAttendance();
-      setTodayAttendance(response.data);
+      setTodayAttendance(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching attendance:', error);
     }
@@ -55,6 +66,7 @@ const Dashboard = () => {
     try {
       await attendanceAPI.clockIn();
       toast.success('Clocked in successfully!');
+      fetchAttendanceStatus();
       fetchTodayAttendance();
     } catch (error) {
       toast.error(error.response?.data?.error || 'Clock in failed');
@@ -67,6 +79,7 @@ const Dashboard = () => {
     try {
       await attendanceAPI.clockOut();
       toast.success('Clocked out successfully!');
+      fetchAttendanceStatus();
       fetchTodayAttendance();
     } catch (error) {
       toast.error(error.response?.data?.error || 'Clock out failed');
@@ -131,12 +144,23 @@ const Dashboard = () => {
         <div className="card">
           <h3 className="font-bold mb-4" style={{color: '#111827'}}>Today's Attendance</h3>
           <div>
-            {todayAttendance?.clock_in ? (
-              <div style={{marginBottom: '12px'}}>
-                <p style={{fontSize: '14px', color: '#6b7280'}}>Clock In</p>
-                <p className="font-bold text-green">
-                  {new Date(todayAttendance.clock_in).toLocaleTimeString()}
-                </p>
+            {attendanceStatus?.is_clocked_in ? (
+              <div>
+                <div style={{marginBottom: '12px'}}>
+                  <p style={{fontSize: '14px', color: '#6b7280'}}>Currently Clocked In</p>
+                  <p className="font-bold text-green">
+                    {attendanceStatus.active_session ? 
+                      new Date(attendanceStatus.active_session.clock_in).toLocaleTimeString() : 'N/A'}
+                  </p>
+                </div>
+                <button
+                  onClick={handleClockOut}
+                  disabled={loading}
+                  className="btn btn-danger"
+                  style={{width: '100%'}}
+                >
+                  {loading ? 'Processing...' : 'Clock Out'}
+                </button>
               </div>
             ) : (
               <button
@@ -145,27 +169,15 @@ const Dashboard = () => {
                 className="btn btn-success"
                 style={{width: '100%', marginBottom: '12px'}}
               >
-                Clock In
+                {loading ? 'Processing...' : 'Clock In'}
               </button>
             )}
             
-            {todayAttendance?.clock_out ? (
-              <div>
-                <p style={{fontSize: '14px', color: '#6b7280'}}>Clock Out</p>
-                <p className="font-bold text-red">
-                  {new Date(todayAttendance.clock_out).toLocaleTimeString()}
-                </p>
+            {todayAttendance.length > 0 && (
+              <div style={{marginTop: '16px', fontSize: '12px', color: '#6b7280'}}>
+                <p>Sessions today: {todayAttendance.length}</p>
               </div>
-            ) : todayAttendance?.clock_in ? (
-              <button
-                onClick={handleClockOut}
-                disabled={loading}
-                className="btn btn-danger"
-                style={{width: '100%'}}
-              >
-                Clock Out
-              </button>
-            ) : null}
+            )}
           </div>
         </div>
 
@@ -173,7 +185,7 @@ const Dashboard = () => {
           <h3 className="font-bold mb-4" style={{color: '#111827'}}>Working Hours</h3>
           <div className="text-center">
             <div className="text-3xl font-bold text-blue">
-              {todayAttendance?.total_hours || '0.00'}
+              {todayAttendance.reduce((total, record) => total + parseFloat(record.total_hours || 0), 0).toFixed(2)}
             </div>
             <p style={{fontSize: '14px', color: '#6b7280'}}>Hours Today</p>
           </div>
@@ -198,10 +210,10 @@ const Dashboard = () => {
               borderRadius: '20px',
               fontSize: '14px',
               fontWeight: '500',
-              backgroundColor: todayAttendance?.is_present ? '#d1fae5' : '#f3f4f6',
-              color: todayAttendance?.is_present ? '#065f46' : '#374151'
+              backgroundColor: attendanceStatus?.is_clocked_in ? '#d1fae5' : '#f3f4f6',
+              color: attendanceStatus?.is_clocked_in ? '#065f46' : '#374151'
             }}>
-              {todayAttendance?.is_present ? 'Present' : 'Absent'}
+              {attendanceStatus?.is_clocked_in ? 'Clocked In' : 'Not Clocked In'}
             </div>
           </div>
         </div>

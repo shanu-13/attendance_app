@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attendance System</title>
+</head>
+<body>
+    <div class="attendance-container">
+        <h2>Attendance Management</h2>
+        
+        <!-- Clock In Button -->
+        <button id="clockInBtn" style="display: none;">
+            Clock In
+        </button>
+        
+        <!-- Clock Out Button -->
+        <button id="clockOutBtn" style="display: none;">
+            Clock Out
+        </button>
+        
+        <!-- Current Session Info -->
+        <div id="currentSession"></div>
+        
+        <!-- Debug Info (remove in production) -->
+        <div id="debugInfo" style="margin-top: 20px; padding: 10px; background: #f0f0f0;">
+            <h4>Debug Info:</h4>
+            <button onclick="updateAttendanceButtons()">Refresh Status</button>
+            <button onclick="testStatusAPI()">Test Status API</button>
+        </div>
+    </div>
+
+    <script src="frontend_attendance_example.js"></script>
+    
+    <script>
+        // Debug function to test the status API
+        async function testStatusAPI() {
+            try {
+                const response = await fetch('/api/attendance/status/', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                console.log('Status API Response:', data);
+                document.getElementById('debugInfo').innerHTML += 
+                    '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                console.error('Status API Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

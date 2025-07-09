@@ -10,41 +10,55 @@ from .serializers import AttendanceRecordSerializer, BreakRecordSerializer, Leav
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def clock_in(request):
-    today = timezone.now().date()
-    attendance, created = AttendanceRecord.objects.get_or_create(
-        user=request.user, 
-        date=today,
-        defaults={'clock_in': timezone.now(), 'is_present': True}
-    )
+    try:
+        today = timezone.now().date()
+        
+        # Check if user is already clocked in (no clock out yet)
+        existing_session = AttendanceRecord.objects.filter(
+            user=request.user, 
+            date=today,
+            clock_in__isnull=False,
+            clock_out__isnull=True
+        ).first()
+        
+        if existing_session:
+            return Response({'error': 'Already clocked in. Please clock out first.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create new attendance session
+        attendance = AttendanceRecord.objects.create(
+            user=request.user,
+            date=today,
+            clock_in=timezone.now(),
+            is_present=True
+        )
+        
+        return Response({'message': 'Clocked in successfully', 'time': attendance.clock_in})
     
-    if not created and attendance.clock_in:
-        return Response({'error': 'Already clocked in today'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    attendance.clock_in = timezone.now()
-    attendance.is_present = True
-    attendance.save()
-    
-    return Response({'message': 'Clocked in successfully', 'time': attendance.clock_in})
+    except Exception as e:
+        return Response({'error': f'Clock in failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def clock_out(request):
     today = timezone.now().date()
-    try:
-        attendance = AttendanceRecord.objects.get(user=request.user, date=today)
-    except AttendanceRecord.DoesNotExist:
-        return Response({'error': 'No clock-in record found'}, status=status.HTTP_400_BAD_REQUEST)
     
-    if attendance.clock_out:
-        return Response({'error': 'Already clocked out today'}, status=status.HTTP_400_BAD_REQUEST)
+    # Find the most recent clock-in without clock-out
+    attendance = AttendanceRecord.objects.filter(
+        user=request.user, 
+        date=today,
+        clock_in__isnull=False,
+        clock_out__isnull=True
+    ).order_by('-clock_in').first()
+    
+    if not attendance:
+        return Response({'error': 'No active clock-in session found'}, status=status.HTTP_400_BAD_REQUEST)
     
     attendance.clock_out = timezone.now()
     
-    # Calculate total hours
-    if attendance.clock_in:
-        total_time = attendance.clock_out - attendance.clock_in
-        break_time = attendance.breaks.aggregate(Sum('break_duration'))['break_duration__sum'] or 0
-        attendance.total_hours = (total_time.total_seconds() / 3600) - float(break_time)
+    # Calculate total hours for this session
+    total_time = attendance.clock_out - attendance.clock_in
+    break_time = attendance.breaks.aggregate(Sum('break_duration'))['break_duration__sum'] or 0
+    attendance.total_hours = (total_time.total_seconds() / 3600) - float(break_time)
     
     attendance.save()
     
@@ -52,14 +66,42 @@ def clock_out(request):
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
+def attendance_status(request):
+    """Get current attendance status to determine which button to show"""
+    today = timezone.now().date()
+    
+    # Check if user has an active session (clocked in but not out)
+    active_session = AttendanceRecord.objects.filter(
+        user=request.user,
+        date=today,
+        clock_in__isnull=False,
+        clock_out__isnull=True
+    ).first()
+    
+    return Response({
+        'is_clocked_in': bool(active_session),
+        'active_session': AttendanceRecordSerializer(active_session).data if active_session else None,
+        'debug_info': {
+            'user_id': request.user.id,
+            'today': str(today),
+            'total_records_today': AttendanceRecord.objects.filter(user=request.user, date=today).count(),
+            'active_sessions_count': AttendanceRecord.objects.filter(
+                user=request.user, date=today, clock_in__isnull=False, clock_out__isnull=True
+            ).count()
+        }
+    })
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
 def attendance_today(request):
     today = timezone.now().date()
-    try:
-        attendance = AttendanceRecord.objects.get(user=request.user, date=today)
-        serializer = AttendanceRecordSerializer(attendance)
-        return Response(serializer.data)
-    except AttendanceRecord.DoesNotExist:
+    attendance_records = AttendanceRecord.objects.filter(user=request.user, date=today).order_by('clock_in')
+    
+    if not attendance_records.exists():
         return Response({'message': 'No attendance record for today'})
+    
+    serializer = AttendanceRecordSerializer(attendance_records, many=True)
+    return Response(serializer.data)
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
@@ -98,16 +140,57 @@ def admin_attendance_report(request):
     if not request.user.organization:
         return Response({'error': 'No organization assigned'}, status=status.HTTP_400_BAD_REQUEST)
     
+    from django.db.models import Sum
+    from collections import defaultdict
+    
     now = timezone.now()
     records = AttendanceRecord.objects.filter(
         date__year=now.year,
         date__month=now.month,
         user__organization=request.user.organization,
         user__is_active=True
-    ).select_related('user')
+    ).select_related('user').order_by('user', 'date', 'clock_in')
     
-    serializer = AttendanceRecordSerializer(records, many=True)
-    return Response(serializer.data)
+    # Group records by user and date
+    grouped_data = defaultdict(lambda: defaultdict(list))
+    for record in records:
+        grouped_data[record.user][record.date].append(record)
+    
+    # Create aggregated report
+    report_data = []
+    for user, dates in grouped_data.items():
+        for date, day_records in dates.items():
+            # Calculate total hours for the day
+            total_hours = sum(float(record.total_hours or 0) for record in day_records)
+            
+            # Get first clock in and last clock out of the day
+            first_clock_in = min(record.clock_in for record in day_records if record.clock_in)
+            last_clock_out = max(record.clock_out for record in day_records if record.clock_out) if any(record.clock_out for record in day_records) else None
+            
+            # Check if user is present (any session shows present)
+            is_present = any(record.is_present for record in day_records)
+            
+            report_data.append({
+                'id': f"{user.id}_{date}",
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'employee_id': user.employee_id
+                },
+                'date': date,
+                'clock_in': first_clock_in,
+                'clock_out': last_clock_out,
+                'total_hours': round(total_hours, 2),
+                'is_present': is_present,
+                'sessions_count': len(day_records)
+            })
+    
+    # Sort by date (newest first) then by user
+    report_data.sort(key=lambda x: (x['date'], x['user']['username']), reverse=True)
+    
+    return Response(report_data)
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
@@ -146,6 +229,8 @@ def employees_leave_management(request):
     ).prefetch_related('leaverequest_set')
     
     employee_data = []
+    today = timezone.now().date()
+    
     for employee in employees:
         # Get recent leave requests
         recent_leaves = employee.leaverequest_set.all()[:5]
@@ -159,6 +244,14 @@ def employees_leave_management(request):
             defaults={'total_allowed': 4, 'used_leaves': 0, 'remaining_leaves': 4}
         )
         
+        # Check if employee is currently clocked in
+        is_clocked_in = AttendanceRecord.objects.filter(
+            user=employee,
+            date=today,
+            clock_in__isnull=False,
+            clock_out__isnull=True
+        ).exists()
+        
         employee_data.append({
             'id': employee.id,
             'employee_id': employee.employee_id,
@@ -167,6 +260,8 @@ def employees_leave_management(request):
             'email': employee.email,
             'designation': employee.designation,
             'project': employee.project,
+            'status': 'Active' if is_clocked_in else 'Inactive',
+            'is_clocked_in': is_clocked_in,
             'leave_balance': {
                 'total_allowed': balance.total_allowed,
                 'used_leaves': balance.used_leaves,

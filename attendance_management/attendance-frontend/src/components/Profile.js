@@ -7,6 +7,8 @@ const Profile = () => {
   const { user, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
   const [profileData, setProfileData] = useState({
     first_name: user?.first_name || '',
     last_name: user?.last_name || '',
@@ -24,6 +26,32 @@ const Profile = () => {
     }
   };
 
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedPhoto(file);
+      const reader = new FileReader();
+      reader.onload = (e) => setPhotoPreview(e.target.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePhotoUpload = async () => {
+    if (!selectedPhoto) return;
+    
+    const formData = new FormData();
+    formData.append('profile_picture', selectedPhoto);
+    
+    const result = await updateProfile(formData, true);
+    if (result.success) {
+      toast.success('Photo updated successfully!');
+      setSelectedPhoto(null);
+      setPhotoPreview(null);
+    } else {
+      toast.error('Failed to update photo');
+    }
+  };
+
   return (
     <div className="container">
       <div className="card">
@@ -38,18 +66,37 @@ const Profile = () => {
             <div style={{
               width: '140px',
               height: '140px',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
               margin: '0 auto 20px',
-              fontSize: '56px',
-              color: 'white',
-              fontWeight: '600',
-              boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
+              boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+              overflow: 'hidden',
+              position: 'relative'
             }}>
-              {user?.first_name?.[0] || user?.username?.[0] || 'U'}
+              {photoPreview || user?.profile_picture ? (
+                <img 
+                  src={photoPreview || user.profile_picture} 
+                  alt="Profile" 
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '56px',
+                  color: 'white',
+                  fontWeight: '600'
+                }}>
+                  {user?.first_name?.[0] || user?.username?.[0] || 'U'}
+                </div>
+              )}
             </div>
             <div style={{marginBottom: '16px'}}>
               <h3 style={{fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: '0'}}>
@@ -58,7 +105,31 @@ const Profile = () => {
               <p style={{fontSize: '14px', color: '#6b7280', margin: '4px 0'}}>{user?.designation || 'Employee'}</p>
               <p style={{fontSize: '12px', color: '#9ca3af'}}>{user?.department || 'Department'}</p>
             </div>
-            <button className="btn btn-primary" style={{fontSize: '14px', padding: '8px 16px'}}>Update Photo</button>
+            <div>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handlePhotoChange}
+                style={{display: 'none'}}
+                id="photo-upload"
+              />
+              <label 
+                htmlFor="photo-upload"
+                className="btn btn-primary" 
+                style={{fontSize: '14px', padding: '8px 16px', cursor: 'pointer', marginRight: '8px'}}
+              >
+                Choose Photo
+              </label>
+              {selectedPhoto && (
+                <button 
+                  onClick={handlePhotoUpload}
+                  className="btn btn-success" 
+                  style={{fontSize: '14px', padding: '8px 16px'}}
+                >
+                  Upload
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Profile Information */}

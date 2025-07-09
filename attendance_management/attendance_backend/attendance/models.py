@@ -13,7 +13,7 @@ class AttendanceRecord(models.Model):
     is_present = models.BooleanField(default=False)
     
     class Meta:
-        unique_together = ['user', 'date']
+        ordering = ['-date', '-clock_in']
     
     def __str__(self):
         return f"{self.user.username} - {self.date}"

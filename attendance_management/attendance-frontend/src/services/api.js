@@ -50,7 +50,14 @@ export const authAPI = {
     }
   },
   getProfile: () => api.get('/auth/profile/'),
-  updateProfile: (data) => api.patch('/auth/profile/update/', data),
+  updateProfile: (data, isFileUpload = false) => {
+    const config = isFileUpload ? {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    } : {};
+    return api.patch('/auth/profile/update/', data, config);
+  },
   createUser: (userData) => api.post('/auth/create-user/', userData),
   getUsers: () => api.get('/auth/users/'),
 };
@@ -58,6 +65,7 @@ export const authAPI = {
 export const attendanceAPI = {
   clockIn: () => api.post('/attendance/clock-in/'),
   clockOut: () => api.post('/attendance/clock-out/'),
+  getAttendanceStatus: () => api.get('/attendance/status/'),
   getTodayAttendance: () => api.get('/attendance/today/'),
   getAttendanceHistory: () => api.get('/attendance/history/'),
   requestLeave: (leaveData) => api.post('/attendance/leave/request/', leaveData),
