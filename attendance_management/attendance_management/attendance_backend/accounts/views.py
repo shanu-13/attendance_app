@@ -73,24 +73,3 @@ def change_password(request):
     user.set_password(new_password)
     user.save()
     return Response({'message': 'Password changed successfully'})
-
-
-class UserUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
-    serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get_queryset(self):
-        if self.request.user.role == 'admin':
-            return User.objects.filter(organization=self.request.user.organization)
-        return User.objects.none()
-    
-    def get_object(self):
-        user_id = self.kwargs.get('user_id')
-        return self.get_queryset().get(id=user_id)
-    
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        if instance == request.user:
-            return Response({'error': 'Cannot delete yourself'}, status=status.HTTP_400_BAD_REQUEST)
-        self.perform_destroy(instance)
-        return Response({'message': 'User deleted successfully'}, status=status.HTTP_200_OK)

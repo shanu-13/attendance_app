@@ -60,11 +60,7 @@ export const authAPI = {
   },
   createUser: (userData) => api.post('/auth/create-user/', userData),
   getUsers: () => api.get('/auth/users/'),
-  // Remove the duplicate /api - it should be just /auth/users/
-  updateUser: (id, userData) => api.put(`/auth/users/${id}/`, userData),
-  deleteUser: (id) => api.delete(`/auth/users/${id}/`)
 };
-
 
 export const attendanceAPI = {
   clockIn: () => api.post('/attendance/clock-in/'),
@@ -81,10 +77,6 @@ export const attendanceAPI = {
   rejectLeave: (leaveId) => api.patch(`/attendance/leave/${leaveId}/reject/`),
   getNotifications: () => api.get('/attendance/notifications/'),
   markNotificationRead: (notificationId) => api.patch(`/attendance/notifications/${notificationId}/read/`),
-  getEmployeeLeaveHistory: (employeeId) => api.get(`/attendance/employee/${employeeId}/leaves/`),
-  // Add to api.js
-  getMyLeaveHistory: () => api.get('/attendance/my-leaves/'),
-
 };
 
 export const userAPI = {

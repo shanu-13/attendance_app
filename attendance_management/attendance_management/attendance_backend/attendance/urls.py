@@ -17,6 +17,4 @@ urlpatterns = [
     path('admin/report/', views.admin_attendance_report, name='admin_report'),
     path('notifications/', views.notifications, name='notifications'),
     path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
-    path('employee/<int:employee_id>/leaves/', views.employee_leave_history, name='employee_leave_history'),
-
 ]

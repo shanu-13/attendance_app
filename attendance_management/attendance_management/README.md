@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Attendance Management System
 
 A professional attendance management system built with React frontend and Django backend.
@@ -91,7 +90,3 @@ attendance_system/
 ## License
 
 MIT License
-=======
-
-[import React.docx](https://github.com/user-attachments/files/21114534/import.React.docx)
->>>>>>> 19558b5279eff0c989b3a609becfcce7a7ddab85

@@ -209,68 +209,6 @@ def leave_requests(request):
     serializer = LeaveRequestSerializer(requests, many=True)
     return Response(serializer.data)
 
-# @api_view(['GET'])
-# @permission_classes([permissions.IsAuthenticated])
-# def employees_leave_management(request):
-#     """Get all employees in organization with their leave information for admin management"""
-#     if request.user.role != 'admin':
-#         return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
-    
-#     if not request.user.organization:
-#         return Response({'error': 'No organization assigned'}, status=status.HTTP_400_BAD_REQUEST)
-    
-#     from django.contrib.auth import get_user_model
-#     User = get_user_model()
-    
-#     employees = User.objects.filter(
-#         organization=request.user.organization,
-#         role='employee',
-#         is_active=True
-#     ).prefetch_related('leaverequest_set')
-    
-#     employee_data = []
-#     today = timezone.now().date()
-    
-#     for employee in employees:
-#         # Get recent leave requests
-#         recent_leaves = employee.leaverequest_set.all()[:5]
-        
-#         # Get current month leave balance
-#         now = timezone.now()
-#         balance, _ = MonthlyLeaveBalance.objects.get_or_create(
-#             user=employee,
-#             year=now.year,
-#             month=now.month,
-#             defaults={'total_allowed': 4, 'used_leaves': 0, 'remaining_leaves': 4}
-#         )
-        
-#         # Check if employee is currently clocked in
-#         is_clocked_in = AttendanceRecord.objects.filter(
-#             user=employee,
-#             date=today,
-#             clock_in__isnull=False,
-#             clock_out__isnull=True
-#         ).exists()
-        
-#         employee_data.append({
-#             'id': employee.id,
-#             'employee_id': employee.employee_id,
-#             'name': f"{employee.first_name} {employee.last_name}",
-#             'username': employee.username,
-#             'email': employee.email,
-#             'designation': employee.designation,
-#             'project': employee.project,
-#             'status': 'Active' if is_clocked_in else 'Inactive',
-#             'is_clocked_in': is_clocked_in,
-#             'leave_balance': {
-#                 'total_allowed': balance.total_allowed,
-#                 'used_leaves': balance.used_leaves,
-#                 'remaining_leaves': balance.remaining_leaves
-#             },
-#             'recent_leave_requests': LeaveRequestSerializer(recent_leaves, many=True).data
-#         })
-    
-#     return Response(employee_data)
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def employees_leave_management(request):
@@ -314,22 +252,14 @@ def employees_leave_management(request):
             clock_out__isnull=True
         ).exists()
         
-        # Build full URL for profile picture
-        profile_picture_url = None
-        if employee.profile_picture:
-            profile_picture_url = request.build_absolute_uri(employee.profile_picture.url)
-        
         employee_data.append({
             'id': employee.id,
             'employee_id': employee.employee_id,
-            'first_name': employee.first_name,
-            'last_name': employee.last_name,
             'name': f"{employee.first_name} {employee.last_name}",
             'username': employee.username,
             'email': employee.email,
             'designation': employee.designation,
             'project': employee.project,
-            'profile_picture': profile_picture_url,  # Use full URL
             'status': 'Active' if is_clocked_in else 'Inactive',
             'is_clocked_in': is_clocked_in,
             'leave_balance': {
@@ -341,7 +271,6 @@ def employees_leave_management(request):
         })
     
     return Response(employee_data)
-
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
@@ -408,24 +337,6 @@ def approve_leave(request, leave_id):
         leave_request.approved_by = request.user
         leave_request.save()
         
-        # Calculate leave days
-        requested_days = (leave_request.end_date - leave_request.start_date).days + 1
-        if leave_request.leave_type == 'half_day':
-            requested_days = 0.5
-        
-        # Update leave balance
-        now = timezone.now()
-        balance, _ = MonthlyLeaveBalance.objects.get_or_create(
-            user=leave_request.user,
-            year=now.year,
-            month=now.month,
-            defaults={'total_allowed': 4, 'used_leaves': 0, 'remaining_leaves': 4}
-        )
-        
-        balance.used_leaves += requested_days
-        balance.remaining_leaves = balance.total_allowed - balance.used_leaves
-        balance.save()
-        
         # Create notification
         try:
             Notification.objects.create(
@@ -437,7 +348,7 @@ def approve_leave(request, leave_id):
         except Exception:
             pass
         
-        return Response({'message': 'Leave approved and balance updated'})
+        return Response({'message': 'Leave approved'})
     except LeaveRequest.DoesNotExist:
         return Response({'error': 'Leave request not found'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -449,25 +360,6 @@ def reject_leave(request, leave_id):
     
     try:
         leave_request = LeaveRequest.objects.get(id=leave_id)
-        
-        # If previously approved, restore leave balance
-        if leave_request.status == 'approved':
-            requested_days = (leave_request.end_date - leave_request.start_date).days + 1
-            if leave_request.leave_type == 'half_day':
-                requested_days = 0.5
-            
-            now = timezone.now()
-            balance, _ = MonthlyLeaveBalance.objects.get_or_create(
-                user=leave_request.user,
-                year=now.year,
-                month=now.month,
-                defaults={'total_allowed': 4, 'used_leaves': 0, 'remaining_leaves': 4}
-            )
-            
-            balance.used_leaves -= requested_days
-            balance.remaining_leaves = balance.total_allowed - balance.used_leaves
-            balance.save()
-        
         leave_request.status = 'rejected'
         leave_request.approved_by = request.user
         leave_request.save()
@@ -507,65 +399,3 @@ def mark_notification_read(request, notification_id):
         return Response({'message': 'Notification marked as read'})
     except Notification.DoesNotExist:
         return Response({'error': 'Notification not found'}, status=status.HTTP_404_NOT_FOUND)
-@api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
-def employee_leave_history(request, employee_id):
-    if request.user.role != 'admin':
-        return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
-    
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
-    
-    try:
-        employee = User.objects.get(
-            id=employee_id, 
-            organization=request.user.organization
-        )
-    except User.DoesNotExist:
-        return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
-    
-    # Get leave history
-    leaves = LeaveRequest.objects.filter(user=employee).order_by('-applied_on')
-    
-    # Get leave balance for current month
-    now = timezone.now()
-    balance, _ = MonthlyLeaveBalance.objects.get_or_create(
-        user=employee,
-        year=now.year,
-        month=now.month,
-        defaults={'total_allowed': 4, 'used_leaves': 0, 'remaining_leaves': 4}
-    )
-    
-    # Calculate leave statistics
-    approved_leaves = leaves.filter(status='approved')
-    total_days_taken = sum(
-        (leave.end_date - leave.start_date).days + 1 
-        for leave in approved_leaves
-    )
-    
-    leave_by_type = {}
-    for leave in approved_leaves:
-        days = (leave.end_date - leave.start_date).days + 1
-        leave_by_type[leave.leave_type] = leave_by_type.get(leave.leave_type, 0) + days
-    
-    return Response({
-        'employee': {
-            'id': employee.id,
-            'name': f"{employee.first_name} {employee.last_name}",
-            'employee_id': employee.employee_id,
-            'profile_picture': request.build_absolute_uri(employee.profile_picture.url) if employee.profile_picture else None
-        },
-        'leave_balance': {
-            'total_allowed': balance.total_allowed,
-            'used_leaves': balance.used_leaves,
-            'remaining_leaves': balance.remaining_leaves
-        },
-        'statistics': {
-            'total_days_taken': total_days_taken,
-            'leave_by_type': leave_by_type,
-            'total_requests': leaves.count(),
-            'approved_requests': approved_leaves.count(),
-            'pending_requests': leaves.filter(status='pending').count()
-        },
-        'leave_history': LeaveRequestSerializer(leaves, many=True).data
-    })
